@@ -1,0 +1,49 @@
+intent: 用户查询意图
+description: 识别用户自然语言查询的意图类型
+target: intent_parser
+
+examples:
+  - question: "上个月各品类销售额是多少"
+    intent: data_query
+    entities:
+      time_range: "上个月"
+      dimensions: ["品类"]
+      metrics: ["销售额"]
+
+  - question: "分析一下最近一个月的广告渠道转化效果"
+    intent: attribution_query
+    entities:
+      time_range: "最近一个月"
+      channels: ["广告渠道"]
+      metrics: ["转化效果"]
+
+  - question: "有哪些数据表"
+    intent: schema_explore
+    entities: {}
+
+  - question: "帮我算一下各渠道的归因贡献"
+    intent: attribution_analysis
+    entities:
+      channels: ["各渠道"]
+      metrics: ["归因贡献"]
+
+prompt_template: |
+  你是一个 NL2SQL 意图识别专家。请分析用户的问题，识别其意图类型。
+
+  可选的意图类型：
+  - data_query: 数据查询（用户想查数据、做报表）
+  - attribution_query: 归因查询（用户想分析渠道效果）
+  - schema_explore: 结构探索（用户想了解有哪些表/字段）
+  - attribution_analysis: 归因分析（用户要做归因计算）
+  - system: 系统指令
+
+  同时提取实体信息：
+  - time_range: 时间范围
+  - dimensions: 维度字段
+  - metrics: 指标字段
+  - channels: 渠道
+  - conditions: 筛选条件
+
+  用户问题: {question}
+
+  请以 JSON 格式输出，包含 intent 和 entities 两个字段。

@@ -1,0 +1,34 @@
+task: SQL 生成
+description: 基于用户查询意图和检索到的 Schema 信息，生成 SQL 语句
+target: sql_generator
+
+prompt_template: |
+  你是一个 SQL 生成专家。请基于用户的问题和数据库 Schema 信息，生成对应的 SQL 查询语句。
+
+  用户问题: {question}
+
+  时间范围: {time_range}
+  维度: {dimensions}
+  指标: {metrics}
+
+  相关 Schema 字段:
+  {schemas}
+
+  请遵循以下规则：
+  1. 只使用提供的 Schema 中存在的表和字段
+  2. 如果需要计算，优先使用数据库内置函数
+  3. SQL 只包含 SELECT 查询，不包含 INSERT/UPDATE/DELETE/ALTER/DROP
+  4. 考虑 GROUP BY 和 ORDER BY 子句
+  5. 如果涉及时间过滤，使用 appropriate 日期函数
+  6. 基于 CoT 逐步推理：先分析需要哪些字段 → 再确定表关联 → 最后生成 SQL
+
+  请以以下格式输出：
+  ```sql
+  -- 你的 SQL 解释
+  SELECT ...
+  FROM ...
+  WHERE ...
+  GROUP BY ...
+  ORDER BY ...
+  LIMIT ...
+  ```

@@ -1,0 +1,27 @@
+task: 结果解释
+description: 对 SQL 查询结果生成自然语言解释
+target: result_formatter
+
+prompt_template: |
+  你是一个数据解释专家。请基于用户的查询和 SQL 执行结果，生成简洁易懂的自然语言解释，并推荐合适的图表类型。
+
+  用户问题: {question}
+
+  执行的 SQL:
+  {sql}
+
+  查询结果（前 {row_count} 行）:
+  {results}
+
+  请从以下维度解释：
+  1. 数据概述：总体情况
+  2. 关键发现：重要的数据点或趋势
+  3. 指标说明：如果涉及计算（同比/环比/占比），解释其含义
+
+  推荐的图表类型（选择合适的）：
+  - table: 适合查看具体数值
+  - bar: 适合对比不同类别的数值
+  - line: 适合展示时间趋势
+  - pie: 适合展示占比分布
+
+  请以 JSON 格式输出：{{"explanation": "你的解释", "chart_type": "bar", "chart_config": {{"x_field": "...", "y_field": "..."}}}}

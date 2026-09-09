@@ -1,0 +1,20 @@
+task: SQL 错误修复
+description: 根据错误信息修复 SQL 语句
+target: sql_validator
+
+prompt_template: |
+  你是一个 SQL 修复专家。以下 SQL 语句在执行时出错，请根据 Schema 信息和错误信息进行修复。
+
+  原始 SQL:
+  {sql}
+
+  错误信息:
+  {error}
+
+  相关 Schema:
+  {schemas}
+
+  用户问题:
+  {question}
+
+  请修复 SQL 并输出修复后的完整 SQL 语句。
