@@ -2,7 +2,7 @@ import { useCallback } from 'react'
 import { message } from 'antd'
 import { useQueryStore, type ChatMessage } from '@/stores/queryStore'
 import * as queriesApi from '@/api/queries'
-import { createAttributionSSEUrl } from '@/api/attribution'
+import { createQuerySSEUrl } from '@/api/queries'
 import { useSSE } from './useSSE'
 
 /**
@@ -77,7 +77,7 @@ export function useQuery() {
       let chartResult: any = null
 
       connect({
-        url: createAttributionSSEUrl(),
+        url: createQuerySSEUrl(),
         method: 'POST',
         body: {
           question: query,

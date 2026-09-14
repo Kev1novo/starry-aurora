@@ -25,7 +25,7 @@ def create_qdrant_client() -> QdrantClient:
         host=settings.QDRANT_HOST,
         port=settings.QDRANT_PORT,
         api_key=settings.QDRANT_API_KEY or None,
-        prefer_grpc=True,
+        prefer_grpc=False,
     )
     return _qdrant_client
 
@@ -53,9 +53,10 @@ def ensure_collection(collection_name: str, vector_size: int) -> bool:
         collections = client.get_collections().collections
         existing = {c.name for c in collections}
         if collection_name not in existing:
+            from qdrant_client.http.models import VectorParams, Distance
             client.recreate_collection(
                 collection_name=collection_name,
-                vectors_config={"size": vector_size, "distance": "Cosine"},
+                vectors_config=VectorParams(size=vector_size, distance=Distance.COSINE),
             )
         return True
     except (UnexpectedResponse, RpcError) as e:

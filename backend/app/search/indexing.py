@@ -5,7 +5,7 @@ from app.core.qdrant import get_qdrant
 
 
 async def sync_schema_to_qdrant(datasource_id: int, fields: list[dict]) -> int:
-    """将 Schema 字段同步到 Qdrant"""
+    """将 Schema 字段同步到 Qdrant（批量嵌入）"""
     from app.agents.shared.embedding import EmbeddingService
     from app.search.vector_store import delete_schema_vectors, upsert_schema_vector
 
@@ -14,10 +14,19 @@ async def sync_schema_to_qdrant(datasource_id: int, fields: list[dict]) -> int:
 
     await delete_schema_vectors(client, datasource_id)
 
+    if not fields:
+        return 0
+
+    # 批量生成所有文本的向量
+    texts = [
+        f"{f.get('table_name', '')}.{f.get('column_name', '')} - {f.get('description', '')} - {f.get('column_comment', '')}"
+        for f in fields
+    ]
+    vectors = await embed.embed(texts)
+
+    # 逐一写入 Qdrant
     count = 0
-    for field in fields:
-        text = f"{field.get('table_name', '')}.{field.get('column_name', '')} - {field.get('description', '')} - {field.get('column_comment', '')}"
-        vector = await embed.embed_one(text)
+    for field, vector in zip(fields, vectors):
         await upsert_schema_vector(client, field["id"], vector, field)
         count += 1
 

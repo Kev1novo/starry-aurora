@@ -16,6 +16,7 @@ Insight Agent——业务编排层·大脑/总指挥
 
 from __future__ import annotations
 
+import re
 import time
 import uuid
 from enum import Enum
@@ -398,12 +399,22 @@ class InsightAgent(BaseAgent):
                 entities={"keywords": [kw for kw in attribution_keywords if kw in question]},
             )
         # 数据查询/探索
-        elif any(kw in question for kw in ["查询", "多少", "统计", "趋势", "对比", "排名"]):
+        business_keywords = ["销售", "金额", "收入", "利润", "成本", "增长", "环比", "同比", "占比",
+                            "上月", "本月", "上个月", "这个月", "最近", "昨天", "今天", "本周",
+                            "总", "合计", "平均", "最高", "最低", "前"]
+        if any(kw in question for kw in ["查询", "多少", "统计", "趋势", "对比", "排名"]):
             intent = IntentResult(
                 intent="data_query",
                 task_type=AgentTaskType.NL2SQL_QUERY,
                 skill_name="data-query",
                 confidence=0.9,
+            )
+        elif any(kw in question for kw in business_keywords):
+            intent = IntentResult(
+                intent="data_query",
+                task_type=AgentTaskType.NL2SQL_QUERY,
+                skill_name="data-query",
+                confidence=0.7,
             )
 
         # 仪表盘
@@ -413,6 +424,15 @@ class InsightAgent(BaseAgent):
                 task_type=AgentTaskType.DASHBOARD_VIEW,
                 skill_name="dashboard-view",
                 confidence=0.85,
+            )
+
+        # Fallback：有内容的非空问题但无规则匹配时默认 NL2SQL
+        if intent.task_type == AgentTaskType.UNKNOWN and len(question.strip()) > 0:
+            intent = IntentResult(
+                intent="data_query",
+                task_type=AgentTaskType.NL2SQL_QUERY,
+                skill_name="data-query",
+                confidence=0.5,
             )
 
         self._current_intent = intent
@@ -620,9 +640,7 @@ class InsightAgent(BaseAgent):
         import pandas as pd
 
         if not all([datasource_id, touchpoint_table, conversion_table]):
-            # 无数据时返回空 DataFrame
-            import pandas as _pd
-            return _pd.DataFrame(), _pd.DataFrame()
+            return pd.DataFrame(), pd.DataFrame()
 
         try:
             from app.repositories.datasource_repo import DataSourceRepository
@@ -634,10 +652,14 @@ class InsightAgent(BaseAgent):
                 return pd.DataFrame(), pd.DataFrame()
 
             config = ds.config
-            conn_str = config.get("connection_uri") or ""
 
-            if conn_str.startswith("mysql"):
+            # 校验表名防止 SQL 注入
+            tp_table = self._sanitize_table_name(touchpoint_table)
+            cv_table = self._sanitize_table_name(conversion_table)
+
+            if config.get("connection_uri", "").startswith("mysql"):
                 import aiomysql
+
                 conn = await aiomysql.connect(
                     host=config.get("host", "localhost"),
                     port=config.get("port", 3306),
@@ -651,27 +673,28 @@ class InsightAgent(BaseAgent):
                         end = time_range.get("end", "")
                         where_clause = ""
                         if start and end:
-                            where_clause = f" WHERE time BETWEEN '{start}' AND '{end}'"
+                            # 转义单引号防止注入
+                            safe_start = start.replace("'", "''")
+                            safe_end = end.replace("'", "''")
+                            where_clause = f" WHERE time BETWEEN '{safe_start}' AND '{safe_end}'"
 
-                        await cursor.execute(f"SELECT * FROM {touchpoint_table}{where_clause} LIMIT 50000")
+                        await cursor.execute(f"SELECT * FROM {tp_table}{where_clause} LIMIT 50000")
                         tp_cols = [d[0] for d in cursor.description]
                         tp_rows = await cursor.fetchall()
 
-                        await cursor.execute(f"SELECT * FROM {conversion_table}{where_clause} LIMIT 50000")
+                        await cursor.execute(f"SELECT * FROM {cv_table}{where_clause} LIMIT 50000")
                         cv_cols = [d[0] for d in cursor.description]
                         cv_rows = await cursor.fetchall()
                 finally:
-                    conn.close()
+                    await conn.close()
 
-                import pandas as _pd
-                return _pd.DataFrame(tp_rows, columns=tp_cols) if tp_rows else _pd.DataFrame(), \
-                       _pd.DataFrame(cv_rows, columns=cv_cols) if cv_rows else _pd.DataFrame()
+                return pd.DataFrame(tp_rows, columns=tp_cols) if tp_rows else pd.DataFrame(), \
+                       pd.DataFrame(cv_rows, columns=cv_cols) if cv_rows else pd.DataFrame()
             else:
                 return pd.DataFrame(), pd.DataFrame()
 
         except Exception:
-            import pandas as _pd
-            return _pd.DataFrame(), _pd.DataFrame()
+            return pd.DataFrame(), pd.DataFrame()
 
     # ---------- 事件发布 ----------
 
@@ -722,6 +745,13 @@ class InsightAgent(BaseAgent):
             except (ValueError, TypeError):
                 pass
         return 0
+
+    @staticmethod
+    def _sanitize_table_name(name: str) -> str:
+        """校验表名只含安全字符，防止 SQL 注入"""
+        if not re.match(r'^[a-zA-Z_][a-zA-Z0-9_.]*$', name):
+            raise ValueError(f"非法表名: {name}")
+        return name
 
 
 # ---------- 快捷工厂 ----------

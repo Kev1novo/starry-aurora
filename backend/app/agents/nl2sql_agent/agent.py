@@ -57,6 +57,8 @@ class DataAgent(BaseAgent):
 
     async def stream_run(self, input_data: dict) -> AsyncGenerator[dict, None]:
         """流式执行 NL2SQL，逐步输出事件"""
+        from copy import deepcopy
+
         from app.agents.nl2sql_agent.graph import build_graph
 
         graph = build_graph()
@@ -83,18 +85,17 @@ class DataAgent(BaseAgent):
 
         yield {"type": "start", "data": {"message": "开始处理查询..."}}
 
-        # 逐步执行 graph 节点并输出中间事件
-        async for event in graph.astream_events(state, version="v1"):
-            event_type = event.get("event", "")
-            if event_type == "on_chain_start":
-                node_name = event["name"]
+        # 单次遍历 graph：astream 同时产出中间事件和最终结果
+        final = deepcopy(state)
+        async for step in graph.astream(state):
+            for node_name, output in step.items():
+                if node_name == "__end__":
+                    continue
+                if isinstance(output, dict):
+                    final.update(output)
                 yield {"type": "progress", "data": {"node": node_name, "message": f"正在执行: {node_name}"}}
-            elif event_type == "on_chain_end":
-                output = event.get("data", {}).get("output", {})
-                if "error" in output and output["error"]:
+                if isinstance(output, dict) and output.get("error"):
                     yield {"type": "error", "data": {"error": output["error"]}}
-
-        final = await graph.ainvoke(state)
 
         yield {"type": "intent", "data": {"intent": final.get("intent"), "entities": final.get("entities")}}
         yield {"type": "schema", "data": {"count": len(final.get("pruned_schemas", []))}}

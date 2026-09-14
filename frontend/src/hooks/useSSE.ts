@@ -32,6 +32,7 @@ export function useSSE() {
 
       const decoder = new TextDecoder()
       let buffer = ''
+      let currentEvent = ''
 
       while (true) {
         const { done, value } = await reader.read()
@@ -46,17 +47,17 @@ export function useSSE() {
           const dataMatch = line.match(/^data: (.+)$/)
 
           if (eventMatch) {
-            continue // event type line, not actionable here
+            currentEvent = eventMatch[1]
+            if (currentEvent === 'done') {
+              opts.onDone?.()
+            }
+            continue
           }
 
           if (dataMatch) {
             try {
               const parsed = JSON.parse(dataMatch[1])
-              if (parsed.type === 'done') {
-                opts.onDone?.()
-              } else {
-                opts.onEvent?.({ type: parsed.type, data: parsed.data })
-              }
+              opts.onEvent?.({ type: currentEvent || 'message', data: parsed })
             } catch { /* skip unparseable */ }
           }
         }

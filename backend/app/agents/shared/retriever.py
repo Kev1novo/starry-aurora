@@ -26,8 +26,8 @@ async def hybrid_search(
     from app.search.vector_store import search_qdrant
     from app.search.keyword_search import search_es
 
-    qdrant = get_qdrant_client()
-    es = get_es_client()
+    qdrant = get_qdrant()
+    es = await anext(get_es())
 
     # 一路：Qdrant 向量检索
     vector_results = await search_qdrant(qdrant, query_vector, datasource_id, top_k)
@@ -45,6 +45,7 @@ async def hybrid_search(
 
 async def _hyde_search(query: str, datasource_id: int, top_k: int) -> list[dict]:
     """HyDE：生成假设文档提升召回"""
+    from app.agents.shared.embedding import EmbeddingService
     from app.agents.shared.llm_factory import LLMFactory
 
     llm = LLMFactory()
@@ -60,7 +61,7 @@ async def _hyde_search(query: str, datasource_id: int, top_k: int) -> list[dict]
     emb = EmbeddingService()
     hyde_vector = await emb.embed_one(hyde_doc)
 
-    qdrant = get_qdrant_client()
+    qdrant = get_qdrant()
     from app.search.vector_store import search_qdrant
 
     return await search_qdrant(qdrant, hyde_vector, datasource_id, top_k)

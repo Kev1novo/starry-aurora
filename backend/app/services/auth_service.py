@@ -113,6 +113,13 @@ class AuthService:
             timedelta(days=settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS),
             str(user.id),
         )
+        # 维护用户级 token 索引，便于登出时 O(1) 批量清理
+        user_token_key = f"user_tokens:{user.id}"
+        await redis.sadd(user_token_key, redis_key)
+        await redis.expire(
+            user_token_key,
+            timedelta(days=settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS),
+        )
 
         return TokenResponse(
             access_token=access_token,
@@ -184,7 +191,7 @@ class AuthService:
         """
         用户登出
 
-        从 Redis 中删除与当前用户关联的 refresh token。
+        通过用户级 token 索引 SET 批量删除该用户的所有 refresh token。
         注意：实际生产环境还应维护 access_token 黑名单以支持立即失效。
 
         Args:
@@ -195,18 +202,11 @@ class AuthService:
             user_id = payload.get("sub")
             if user_id is not None:
                 redis = await self._get_redis()
-                # 清除该用户的所有 refresh token
-                # 注意：这里简化处理，实际可按用户 ID 维护 token 集合
-                pattern = "refresh_*"
-                cursor = 0
-                while True:
-                    cursor, keys = await redis.scan(cursor=cursor, match=pattern, count=100)
-                    for key in keys:
-                        stored_id = await redis.get(key)
-                        if stored_id == user_id:
-                            await redis.delete(key)
-                    if cursor == 0:
-                        break
+                user_token_key = f"user_tokens:{user_id}"
+                token_keys = await redis.smembers(user_token_key)
+                if token_keys:
+                    await redis.delete(*token_keys)
+                    await redis.delete(user_token_key)
         except JWTError:
             # token 可能已过期，忽略
             pass

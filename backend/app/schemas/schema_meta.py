@@ -31,7 +31,9 @@ class SchemaTableResponse(BaseModel):
     column_count: int
 
 
-class SyncResult(BaseModel):
+class SyncResultResponse(BaseModel):
     """Schema 同步结果"""
     tables_count: int = 0
     fields_count: int = 0
+    status: str = "success"
+    message: str | None = None

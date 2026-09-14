@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.agents.nl2sql_agent.parser import extract_json
 from app.agents.nl2sql_agent.state import AgentState
 from app.agents.shared.llm_factory import LLMFactory
 
@@ -177,28 +178,11 @@ def _build_entity_context(
 
 def _parse_llm_response(raw: str) -> dict[str, Any]:
     """从 LLM 响应中提取 JSON"""
-    import re
-
-    # 尝试从 ```json ... ``` 代码块中提取
-    match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", raw, re.DOTALL)
-    if match:
-        try:
-            import json
-
-            return json.loads(match.group(1))
-        except json.JSONDecodeError:
-            pass
-
-    # 尝试从第一个 { 到最后一个 }
-    brace_start = raw.find("{")
-    brace_end = raw.rfind("}")
-    if brace_start != -1 and brace_end > brace_start:
-        try:
-            import json
-
-            return json.loads(raw[brace_start : brace_end + 1])
-        except json.JSONDecodeError:
-            pass
+    result = extract_json(raw)
+    if result is not None:
+        # 兼容不同模型的字段命名（sql / query / SQL）
+        sql = result.get("sql") or result.get("SQL") or result.get("query")
+        return {"sql": sql}
 
     # 如果 LLM 直接返回了 SQL（没有 JSON 包裹），将其作为 sql 字段
     stripped = raw.strip()

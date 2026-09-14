@@ -46,8 +46,9 @@ class Settings(BaseSettings):
     LLM_MAX_TOKENS: int = 4096
 
     # ---------- Embedding ----------
-    EMBEDDING_MODEL: str = "text-embedding-3-small"
-    EMBEDDING_DIM: int = 1536
+    EMBEDDING_MODEL: str = "shibing624/text2vec-base-chinese"
+    EMBEDDING_DIM: int = 768
+    EMBEDDING_USE_LOCAL: bool = True  # True=用本地 sentence-transformers, False=用 API
 
     # ---------- JWT ----------
     JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 30

@@ -20,7 +20,7 @@ export default function SchemaManagerPage() {
   const [loadingDs, setLoadingDs] = useState(false)
   const [loadingSchema, setLoadingSchema] = useState(false)
   const [searchText, setSearchText] = useState('')
-  const [editingField, setEditingField] = useState<{ tableIdx: number; columnName: string } | null>(null)
+  const [editingField, setEditingField] = useState<{ tableName: string; columnName: string } | null>(null)
   const [editValue, setEditValue] = useState('')
   const inputRef = useRef<InputRef>(null)
   const mountedRef = useRef(true)
@@ -65,10 +65,9 @@ export default function SchemaManagerPage() {
   }
 
   /** 开始编辑业务描述 */
-  const handleStartEdit = (tableIdx: number, field: ColumnField) => {
-    setEditingField({ tableIdx, columnName: field.column_name })
-    setEditValue(field.business_description ?? '')
-    // 下次渲染时自动聚焦输入框
+  const handleStartEdit = (tableName: string, field: ColumnField) => {
+    setEditingField({ tableName, columnName: field.column_name })
+    setEditValue(field.description ?? '')
     setTimeout(() => inputRef.current?.focus(), 50)
   }
 
@@ -86,8 +85,8 @@ export default function SchemaManagerPage() {
           t.table_name === tableName
             ? {
                 ...t,
-                fields: t.fields.map((f) =>
-                  f.column_name === columnName ? { ...f, business_description: editValue } : f,
+                columns: t.columns.map((f) =>
+                  f.column_name === columnName ? { ...f, description: editValue } : f,
                 ),
               }
             : t,
@@ -100,14 +99,8 @@ export default function SchemaManagerPage() {
     }
   }
 
-  /** 取消编辑 */
-  const handleCancelEdit = () => {
-    setEditingField(null)
-    setEditValue('')
-  }
-
   /** 字段表格列定义 */
-  const fieldColumns = (tableName: string, tableIdx: number): ColumnsType<ColumnField> => [
+  const fieldColumns = (tableName: string): ColumnsType<ColumnField> => [
     {
       title: '字段名',
       dataIndex: 'column_name',
@@ -138,26 +131,26 @@ export default function SchemaManagerPage() {
     },
     {
       title: '默认值',
-      dataIndex: 'default_value',
-      key: 'default_value',
+      dataIndex: 'column_default',
+      key: 'column_default',
       width: 120,
       render: (val: string | null) => (val ?? '-'),
     },
     {
       title: '注释',
-      dataIndex: 'comment',
-      key: 'comment',
+      dataIndex: 'column_comment',
+      key: 'column_comment',
       width: 200,
       render: (val: string | null) => val || '-',
     },
     {
       title: '业务描述',
-      dataIndex: 'business_description',
-      key: 'business_description',
+      dataIndex: 'description',
+      key: 'description',
       width: 220,
-      render: (desc: string | undefined, record: ColumnField) => {
+      render: (desc: string | undefined | null, record: ColumnField) => {
         const isEditing =
-          editingField?.tableIdx === tableIdx && editingField?.columnName === record.column_name
+          editingField?.tableName === tableName && editingField?.columnName === record.column_name
 
         if (isEditing) {
           return (
@@ -187,7 +180,7 @@ export default function SchemaManagerPage() {
               minHeight: 22,
               display: 'inline-block',
             }}
-            onClick={() => handleStartEdit(tableIdx, record)}
+            onClick={() => handleStartEdit(tableName, record)}
             title="点击编辑"
           >
             {desc || '点击添加描述'}
@@ -209,10 +202,10 @@ export default function SchemaManagerPage() {
       }
 
       // 按字段名过滤
-      const matchedFields = table.fields.filter((f) =>
+      const matchedColumns = table.columns.filter((f) =>
         f.column_name.toLowerCase().includes(searchText.toLowerCase()),
       )
-      return matchedFields.length > 0 ? { ...table, fields: matchedFields } : null
+      return matchedColumns.length > 0 ? { ...table, columns: matchedColumns } : null
     })
     .filter(Boolean) as TableInfo[]
 
@@ -276,18 +269,16 @@ export default function SchemaManagerPage() {
             description={searchText ? '未匹配到表或字段' : '该数据源暂无表数据，请先同步 Schema'}
           />
         ) : (
-          filteredTables.map((table, idx) => (
+          filteredTables.map((table) => (
             <Card
               key={table.table_name}
               title={
                 <span>
                   <TableOutlined style={{ marginRight: 8 }} />
                   {table.table_name}
-                  {table.table_comment && (
-                    <span style={{ color: '#8c8c8c', fontWeight: 'normal', marginLeft: 8, fontSize: 13 }}>
-                      {table.table_comment}
-                    </span>
-                  )}
+                  <span style={{ color: '#8c8c8c', fontWeight: 'normal', marginLeft: 8, fontSize: 13 }}>
+                    {table.column_count} 个字段
+                  </span>
                 </span>
               }
               style={{ marginBottom: 16 }}
@@ -295,7 +286,8 @@ export default function SchemaManagerPage() {
             >
               <Table<ColumnField>
                 rowKey="column_name"
-                columns={fieldColumns(table.table_name, idx)}                dataSource={table.fields}
+                columns={fieldColumns(table.table_name)}
+                dataSource={table.columns}
                 pagination={false}
                 size="small"
                 scroll={{ x: 900 }}

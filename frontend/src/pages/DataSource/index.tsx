@@ -9,9 +9,9 @@ import {
   ReloadOutlined,
 } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
-import type { DataSource, CreateDataSourceParams, TestConnectionResult } from '@/types/datasource'
+import type { DataSource, CreateDataSourceParams, DataSourceDetail, TestConnectionResult } from '@/types/datasource'
 import { useDatasources } from '@/hooks/useDatasources'
-import { createDataSource, updateDataSource, testConnection as testDsConnection } from '@/api/datasources'
+import { createDataSource, updateDataSource, getDataSource, testConnection as testDsConnection } from '@/api/datasources'
 import ConnectionForm from './ConnectionForm'
 
 const { Title, Paragraph } = Typography
@@ -48,6 +48,7 @@ export default function DataSourcePage() {
 
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [editingId, setEditingId] = useState<number | null>(null)
+  const [editingValues, setEditingValues] = useState<CreateDataSourceParams | undefined>(undefined)
   const [submitting, setSubmitting] = useState(false)
   const [testingId, setTestingId] = useState<number | null>(null)
   const [syncingId, setSyncingId] = useState<number | null>(null)
@@ -55,19 +56,37 @@ export default function DataSourcePage() {
   /** 打开新建抽屉 */
   const handleOpenCreate = () => {
     setEditingId(null)
+    setEditingValues(undefined)
     setDrawerOpen(true)
   }
 
-  /** 打开编辑抽屉 */
-  const handleOpenEdit = (record: DataSource) => {
+  /** 打开编辑抽屉（先获取详情） */
+  const handleOpenEdit = async (record: DataSource) => {
     setEditingId(record.id)
+    setEditingValues(undefined)
     setDrawerOpen(true)
+    try {
+      const res = await getDataSource(record.id)
+      const detail = res.data as DataSourceDetail
+      setEditingValues({
+        name: detail.name,
+        type: detail.type as 'mysql' | 'postgresql' | 'clickhouse',
+        host: detail.host,
+        port: detail.port,
+        database_name: detail.database_name,
+        username: detail.username,
+        password: '',
+      })
+    } catch {
+      message.error('获取数据源详情失败')
+    }
   }
 
   /** 关闭抽屉 */
   const handleCloseDrawer = () => {
     setDrawerOpen(false)
     setEditingId(null)
+    setEditingValues(undefined)
   }
 
   /** 提交创建/更新 */
@@ -75,7 +94,9 @@ export default function DataSourcePage() {
     setSubmitting(true)
     try {
       if (editingId !== null) {
-        await updateDataSource(editingId, values)
+        const patch: Record<string, unknown> = { ...values }
+        if (!patch.password) delete patch.password
+        await updateDataSource(editingId, patch)
       } else {
         await createDataSource(values)
       }
@@ -259,6 +280,7 @@ export default function DataSourcePage() {
       >
         <ConnectionForm
           mode={editingId !== null ? 'edit' : 'create'}
+          initialValues={editingValues}
           onSubmit={handleSubmit}
           onCancel={handleCloseDrawer}
           submitting={submitting}

@@ -33,6 +33,13 @@ class SchemaService:
     依赖 Qdrant 存储向量嵌入、ES 提供全文检索（预留）。
     """
 
+    # 系统内置表名列表——跳过不同步到 Schema 元数据
+    _SYSTEM_TABLES = frozenset({
+        "alembic_version", "datasources", "schema_metas", "users",
+        "conversations", "messages", "query_history", "attribution_tasks",
+        "attribution_results", "touchpoints", "conversation_messages",
+    })
+
     def __init__(
         self,
         db: AsyncSession,
@@ -68,6 +75,13 @@ class SchemaService:
         conn_info = self._get_connection_info(datasource)
         tables = await self._fetch_schema_from_db(conn_info)
 
+        # 过滤系统内置表
+        tables = {
+            tname: cols
+            for tname, cols in tables.items()
+            if tname not in self._SYSTEM_TABLES
+        }
+
         # 删除旧的 Schema 记录
         await self.schema_repo.delete_by_datasource(ds_id)
 
@@ -76,6 +90,12 @@ class SchemaService:
         for table_name, columns in tables.items():
             fields: List[SchemaMeta] = []
             for col in columns:
+                description = (
+                    col.get("column_comment")
+                    or self._infer_description_from_name(
+                        col["column_name"], col["data_type"], table_name
+                    )
+                )
                 fields.append(
                     SchemaMeta(
                         datasource_id=ds_id,
@@ -86,6 +106,7 @@ class SchemaService:
                         is_nullable=col.get("is_nullable", True),
                         column_default=col.get("column_default"),
                         column_comment=col.get("column_comment"),
+                        description=description,
                         is_primary_key=col.get("is_primary_key", False),
                         is_foreign_key=col.get("is_foreign_key", False),
                         indexed=col.get("indexed", False),
@@ -377,28 +398,88 @@ class SchemaService:
         """
         # 常见字段名映射
         name_mapping = {
+            # 通用标识与名称
             "id": "唯一标识符",
             "name": "名称",
+            "label": "标签名称",
+            "title": "标题",
+            "code": "编码",
+            "key": "键值",
+            "value": "值",
+            # 时间字段
             "created_at": "创建时间",
             "updated_at": "更新时间",
+            "deleted_at": "删除时间",
+            "start_time": "开始时间",
+            "end_time": "结束时间",
+            "date": "日期",
+            "year": "年份",
+            "month": "月份",
+            # 布尔/状态字段
             "is_active": "是否启用",
             "is_deleted": "是否删除",
+            "is_verified": "是否已验证",
+            "is_paid": "是否已支付",
             "status": "状态",
             "type": "类型",
+            # 联系方式
             "email": "电子邮箱",
             "phone": "电话号码",
             "mobile": "手机号码",
             "address": "地址",
+            "city": "城市",
+            "region": "地区",
+            "country": "国家",
+            "zip_code": "邮编",
+            # 文本字段
             "description": "描述",
             "remark": "备注",
+            "note": "备注",
+            "content": "内容",
+            "summary": "摘要",
+            "comment": "评论",
+            # 排序
             "sort": "排序值",
+            "sort_order": "排序值",
             "order": "排序",
+            "priority": "优先级",
+            "level": "层级",
+            # 金额 / 计数
             "price": "价格",
+            "unit_price": "单价",
+            "cost_price": "成本价",
+            "total_amount": "总金额",
+            "discount_amount": "优惠金额",
+            "subtotal": "小计金额",
             "amount": "金额",
             "count": "计数",
             "quantity": "数量",
+            "stock_qty": "库存数量",
+            "num": "数量",
+            # 外键 / 关联 ID
             "user_id": "用户 ID",
             "dept_id": "部门 ID",
+            "customer_id": "客户 ID",
+            "product_id": "产品 ID",
+            "order_id": "订单 ID",
+            "order_no": "订单号",
+            "category_id": "分类 ID",
+            "parent_id": "父级 ID",
+            "sku": "库存单位编码",
+            # 营销/广告
+            "channel": "营销渠道",
+            "budget": "预算金额",
+            "spend": "消费金额",
+            "impressions": "曝光量",
+            "clicks": "点击量",
+            "ctr": "点击率",
+            "conversions": "转化数",
+            "conversion_rate": "转化率",
+            "revenue": "归因收入",
+            "roi": "投资回报率",
+            "cost": "成本",
+            "profit": "利润",
+            "margin": "利润率",
         }
 
         lower_name = column_name.lower()

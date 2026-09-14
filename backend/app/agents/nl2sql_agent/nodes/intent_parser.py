@@ -8,6 +8,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
+from app.agents.nl2sql_agent.parser import extract_json
 from app.agents.nl2sql_agent.state import AgentState
 from app.agents.shared.llm_factory import LLMFactory
 
@@ -96,30 +97,9 @@ async def intent_parser_node(state: AgentState) -> dict[str, Any]:
 
 def _parse_llm_response(raw: str) -> dict[str, Any]:
     """从 LLM 响应中提取并解析 JSON"""
-    # 尝试直接解析
-    try:
-        return json.loads(raw)
-    except json.JSONDecodeError:
-        pass
-
-    # 尝试从 ```json ... ``` 代码块中提取
-    import re
-
-    match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", raw, re.DOTALL)
-    if match:
-        try:
-            return json.loads(match.group(1))
-        except json.JSONDecodeError:
-            pass
-
-    # 尝试从第一个 { 到最后一个 } 截取
-    brace_start = raw.find("{")
-    brace_end = raw.rfind("}")
-    if brace_start != -1 and brace_end > brace_start:
-        try:
-            return json.loads(raw[brace_start : brace_end + 1])
-        except json.JSONDecodeError:
-            pass
+    result = extract_json(raw)
+    if result is not None:
+        return result
 
     return {
         "intent": "data_query",

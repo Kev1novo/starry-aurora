@@ -6,7 +6,7 @@ from qdrant_client import QdrantClient
 SCHEMA_COLLECTION = "schema_fields"
 
 
-def ensure_schema_collection(client: QdrantClient, vector_size: int = 1536) -> None:
+def ensure_schema_collection(client: QdrantClient, vector_size: int = 768) -> None:
     """确保 Schema 集合存在"""
     from app.core.qdrant import ensure_collection
     ensure_collection(SCHEMA_COLLECTION, vector_size)
@@ -23,15 +23,16 @@ async def search_qdrant(
     from qdrant_client.http import models
 
     def _search():
-        results = client.search(
+        results = client.query_points(
             collection_name=SCHEMA_COLLECTION,
-            query_vector=query_vector,
+            query=query_vector,
             query_filter=models.Filter(
                 must=[models.FieldCondition(key="datasource_id", match=models.MatchValue(value=datasource_id))]
             ) if datasource_id else None,
             limit=top_k,
+            with_payload=True,
         )
-        return results
+        return results.points
 
     results = await asyncio.to_thread(_search)
 
@@ -53,15 +54,16 @@ async def upsert_schema_vector(
 ) -> None:
     """写入 Schema 向量"""
     import asyncio
+    from qdrant_client.http import models
 
     def _upsert():
         client.upsert(
             collection_name=SCHEMA_COLLECTION,
-            points=[{
-                "id": field_id,
-                "vector": vector,
-                "payload": payload,
-            }],
+            points=[models.PointStruct(
+                id=field_id,
+                vector=vector,
+                payload=payload,
+            )],
         )
 
     await asyncio.to_thread(_upsert)

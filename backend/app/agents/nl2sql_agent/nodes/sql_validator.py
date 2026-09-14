@@ -178,14 +178,13 @@ async def _check_explain(sql: str, datasource_id: int) -> tuple[bool, str]:
         return True, "非查询语句跳过 EXPLAIN"
 
     try:
-        from app.agents.nl2sql_agent.nodes.sql_executor import _get_datasource_connection
+        from app.agents.nl2sql_agent.nodes.sql_executor import _get_datasource_connection, _execute
 
         conn = await _get_datasource_connection(datasource_id, timeout=10)
         explain_sql = f"EXPLAIN {sql}"
-        results = await conn.fetch(explain_sql)
+        results = await _execute(conn, explain_sql, max_rows=10)
 
         if isinstance(results, list):
-            # 有结果说明 EXPLAIN 成功
             return True, ""
 
         return False, "EXPLAIN 无返回结果"

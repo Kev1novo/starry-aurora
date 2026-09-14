@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.exceptions import NotFoundException
-from app.models.base import BaseModel
+from app.models.base import BaseModel as ORMBase
 
 # ---------- 枚举 ----------
 
@@ -42,10 +42,11 @@ class AttachmentStatus(str, Enum):
 # ---------- ORM 模型 ----------
 
 
-class Attachment(BaseModel):
+class Attachment(ORMBase):
     """附件 ORM 模型"""
 
     __tablename__ = "attachments"
+    __table_args__ = {"extend_existing": True}
 
     user_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("users.id"), nullable=False, index=True, comment="所属用户 ID"

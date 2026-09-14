@@ -37,6 +37,12 @@ cd frontend && npm run lint
 cd backend && pytest -v
 ```
 
+### Windows 注意事项
+
+- **进程管理**：Git Bash `nohup` 不能可靠管理 Python 子进程（产生僵尸进程）。强制终止用 PowerShell: `Get-NetTCPConnection -LocalPort 8000 | Select-Object -ExpandProperty OwningProcess | ForEach-Object { Stop-Process -Id $_ -Force }`
+- **环境变量**：通过 PowerShell 设置 `$env:VAR=val; python ...` 而非 `VAR=val python ...`
+- **路径格式**：在 Git Bash 中用 `/d/...` 而非 `D:\...`，或用 `cd /d/Vibe_Coding/...`
+
 ## 后端架构
 
 ### 核心目录 (`backend/app/`)
@@ -61,6 +67,8 @@ cd backend && pytest -v
 ```
 Insight Agent (insight_agent/)
   ├── agent.py           — 编排入口, validate → resolve_intent → check_skill → prepare_context → delegate
+  │                       _resolve_intent(): 规则匹配（ROI/归因→Attribution；
+  │                       销售/金额/环比/同比等业务关键词→NL2SQL；兜底UNKNOWN也走NL2SQL）
   ├── skill_manager.py   — Skill 约束方法论校验 (YAML rules)
   ├── workspace_manager.py — 工作区 CRUD + ORM 模型
   ├── attachment_manager.py — 附件管理 (ORM 模型 + 存储存根)
@@ -70,6 +78,7 @@ NL2SQL Agent (nl2sql_agent/)
   ├── agent.py           — DataAgent 入口 run() / stream_run()
   ├── graph.py           — LangGraph StateGraph (6 节点 + 修复循环)
   ├── state.py           — AgentState TypedDict
+  ├── parser.py          — 独立的 NL2SQL 意图解析（时间表达式、指标/维度提取）
   ├── nodes/             — intent_parser → schema_retriever → sql_generator → sql_validator → sql_executor → result_formatter
   ├── tools/             — schema_search, sql_tool, data_profile (LangChain 工具)
   └── prompts/           — YAML 提示模板 (intent, sql_generation, sql_fix, explanation)

@@ -28,3 +28,7 @@ export async function getQueryDetail(queryId: number): Promise<any> {
   const res = await client.get(`/queries/${queryId}`)
   return res.data.data
 }
+
+export function createQuerySSEUrl(): string {
+  return '/api/v1/queries/ask/stream'
+}

@@ -4,7 +4,6 @@ FastAPI 依赖注入汇总
 """
 
 from collections.abc import AsyncGenerator
-from typing import Any, Dict
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -39,10 +38,13 @@ _security_scheme = HTTPBearer()
 
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(_security_scheme),
-) -> Dict[str, Any]:
+    db: AsyncSession = Depends(get_db),
+):
     """
-    从 JWT 解析当前用户
-    提取 Authorization Bearer token，验证并返回用户信息。
+    从 JWT 解析当前用户并校验数据库状态
+    查询数据库确认用户存在且未被禁用。
+
+    注意：api/v1/auth.py 中也有同名依赖函数，两者行为一致。
     """
     token = credentials.credentials
     try:
@@ -53,9 +55,25 @@ async def get_current_user(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Token 中缺少用户标识",
             )
-        return {"user_id": user_id, **payload}
     except JWTError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token 无效或已过期",
         )
+
+    from app.models.user import User
+    from app.repositories.user_repo import UserRepository
+
+    repo = UserRepository(db)
+    user = await repo.get(int(user_id))
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="用户不存在",
+        )
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="账号已被禁用",
+        )
+    return user

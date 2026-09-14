@@ -19,7 +19,7 @@ async def ensure_schema_index(es: AsyncElasticsearch) -> None:
                         "datasource_id": {"type": "integer"},
                         "table_name": {"type": "keyword"},
                         "column_name": {"type": "keyword"},
-                        "description": {"type": "text", "analyzer": "ik_max_word"},
+                        "description": {"type": "text", "analyzer": "standard"},
                         "data_type": {"type": "keyword"},
                     }
                 },

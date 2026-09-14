@@ -203,16 +203,14 @@ async def _execute_mysql(
         minsize=1,
         maxsize=2,
         connect_timeout=10,
-        cursorclass=aiomysql.cursors.DictCursor,
     )
     try:
         async with pool.acquire() as conn:
-            async with conn.cursor() as cur:
+            async with conn.cursor(aiomysql.cursors.DictCursor) as cur:
                 await cur.execute("SET SESSION TRANSACTION READ ONLY")
                 await cur.execute(sql)
                 rows = await cur.fetchmany(size=max_rows)
-                columns = [d[0] for d in cur.description] if cur.description else []
-                return [dict(zip(columns, row)) for row in rows]
+                return [dict(r) for r in rows]
     finally:
         pool.close()
         await pool.wait_closed()
@@ -252,14 +250,15 @@ async def _execute_ch(
 ) -> list[dict[str, Any]]:
     """通过 HTTP 接口执行 ClickHouse SQL"""
     import json
+    from urllib.parse import quote
 
     import aiohttp
 
     url = (
         f"http://{conn_info.host}:{conn_info.port}"
-        f"/?query={sql}&user={conn_info.username}"
-        f"&password={conn_info.password}"
-        f"&database={conn_info.database}"
+        f"/?query={quote(sql)}&user={quote(conn_info.username)}"
+        f"&password={quote(conn_info.password)}"
+        f"&database={quote(conn_info.database)}"
         f"&default_format=JSONCompact"
         f"&max_result_rows={max_rows}"
     )

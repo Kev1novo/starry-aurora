@@ -28,21 +28,13 @@ export interface DataSource {
   created_at: string
 }
 
-/** 表元数据 */
-export interface SchemaMeta {
-  /** 元数据 ID */
-  id: number
-  /** 表名 */
-  table_name: string
-  /** 列名 */
-  column_name: string
-  /** 数据类型 */
-  data_type: string
-  /** 字段描述 */
-  description?: string
+/** 数据源详情（编辑时回填用） */
+export interface DataSourceDetail extends DataSource {
+  /** 用户名 */
+  username: string
 }
 
-/** 表字段详情 */
+/** 表字段详情（对齐后端 SchemaMetaResponse） */
 export interface ColumnField {
   /** 字段名 */
   column_name: string
@@ -51,23 +43,29 @@ export interface ColumnField {
   /** 是否可空 */
   is_nullable: boolean
   /** 默认值 */
-  default_value: string | null
+  column_default: string | null
   /** 是否主键 */
   is_primary_key: boolean
   /** 字段注释 */
-  comment: string | null
+  column_comment: string | null
+  /** 顺序 */
+  ordinal_position: number
   /** 业务描述（用户自定义） */
-  business_description?: string
+  description?: string | null
+  /** 是否外键 */
+  is_foreign_key: boolean
+  /** 是否有索引 */
+  indexed: boolean
 }
 
-/** 表信息 */
+/** 表信息（对齐后端 SchemaTableResponse） */
 export interface TableInfo {
   /** 表名 */
   table_name: string
-  /** 表注释 */
-  table_comment: string | null
   /** 字段列表 */
-  fields: ColumnField[]
+  columns: ColumnField[]
+  /** 字段数 */
+  column_count: number
 }
 
 /** 创建数据源请求 */

@@ -65,6 +65,22 @@ class DataSourceResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class DataSourceDetailResponse(BaseModel):
+    """数据源详情响应体（编辑时需回填的字段）"""
+
+    id: int = Field(..., description="数据源 ID")
+    name: str = Field(..., description="数据源别名")
+    type: str = Field(..., description="数据库类型")
+    host: str = Field(..., description="数据库主机地址")
+    port: int = Field(..., description="数据库端口")
+    database_name: str = Field(..., description="数据库名称")
+    username: str = Field(..., description="数据库用户名")
+    status: str = Field(..., description="连接状态")
+    created_at: datetime = Field(..., description="创建时间")
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class DataSourceList(BaseModel):
     """数据源列表响应体"""
 

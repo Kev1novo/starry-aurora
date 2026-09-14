@@ -12,11 +12,16 @@ class LLMFactory:
     def __init__(
         self,
         model: str = "",
-        temperature: float = 0.0,
+        temperature: Optional[float] = None,
         max_tokens: int = 0,
     ):
-        self.model = model or settings.LLM_MODEL
-        self.temperature = temperature if temperature > 0 else settings.LLM_TEMPERATURE
+        raw_model = model or settings.LLM_MODEL
+        # LiteLLM 要求模型名带 provider 前缀（如 openai/qwen-plus）
+        if "/" not in raw_model and settings.LLM_PROVIDER:
+            self.model = f"{settings.LLM_PROVIDER}/{raw_model}"
+        else:
+            self.model = raw_model
+        self.temperature = temperature if temperature is not None else settings.LLM_TEMPERATURE
         self.max_tokens = max_tokens or settings.LLM_MAX_TOKENS
 
     async def generate(self, messages: list[dict], **kwargs) -> str:
