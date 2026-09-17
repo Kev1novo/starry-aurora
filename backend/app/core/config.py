@@ -46,8 +46,8 @@ class Settings(BaseSettings):
     LLM_MAX_TOKENS: int = 4096
 
     # ---------- Embedding ----------
-    EMBEDDING_MODEL: str = "shibing624/text2vec-base-chinese"
-    EMBEDDING_DIM: int = 768
+    EMBEDDING_MODEL: str = "C:/Users/EDY/.cache/modelscope/models/BAAI--bge-small-zh-v1.5/snapshots/master"
+    EMBEDDING_DIM: int = 512
     EMBEDDING_USE_LOCAL: bool = True  # True=用本地 sentence-transformers, False=用 API
 
     # ---------- JWT ----------

@@ -51,8 +51,14 @@ _INTENT_SYSTEM_PROMPT = """你是一个 NL2SQL 意图解析器。你的职责是
 - metrics: 用户想查询的度量指标
 - dimensions: 用户想按什么维度分组/筛选
 - filters: 其他过滤条件
-- time_range: 时间范围，{start: "YYYY-MM-DD" or null, end: "YYYY-MM-DD" or null, granularity: "day"|"week"|"month"|"quarter"|"year"|null}
-  如果问题中没有明确时间范围，start 和 end 设为 null。
+- time_range: 时间范围，{start: "YYYY-MM-DD", end: "YYYY-MM-DD", granularity: "day"|"week"|"month"|"quarter"|"year"|null}
+  重要：将自然语言的时间表达转换为具体日期。
+  例如 "上个月" → {"start": "2026-08-01", "end": "2026-08-31", "granularity": "month"}
+       "昨天"   → {"start": "2026-09-14", "end": "2026-09-14", "granularity": "day"}
+       "今年"   → {"start": "2026-01-01", "end": "2026-09-14", "granularity": "year"}
+       "近7天"  → {"start": "2026-09-08", "end": "2026-09-14", "granularity": "day"}
+  计算相对时间时以今天的日期 2026-09-15 为基准。
+  如果问题中没有明确时间范围，start、end 和 granularity 全部设为 null。
 
 只输出 JSON，不输出其他内容。"""
 

@@ -102,24 +102,22 @@ async def test_datasource_connection_raw(
 @router.post("/{ds_id}/test", response_model=ApiResponse[TestConnectionResponse])
 async def test_datasource_connection(
     ds_id: int,
-    data: TestConnectionRequest | None = None,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """测试已保存数据源的连接"""
+    """测试已保存数据源的连接（使用已保存的配置，无需 request body）"""
+    from app.core.security import decrypt_password
+
     service = DataSourceService(db)
-    if data:
-        result = await service.test_connection(data)
-    else:
-        ds = await service.get_datasource(current_user.id, ds_id)
-        test_data = TestConnectionRequest(
-            host=ds.host,
-            port=ds.port,
-            database_name=ds.database_name,
-            username=ds.username,
-            password=ds.password,
-        )
-        result = await service.test_connection(test_data)
+    ds = await service.get_datasource(current_user.id, ds_id)
+    test_data = TestConnectionRequest(
+        host=ds.host,
+        port=ds.port,
+        database_name=ds.database_name,
+        username=ds.username,
+        password=decrypt_password(ds.password),
+    )
+    result = await service.test_connection(test_data)
     return ApiResponse(data=result)
 
 

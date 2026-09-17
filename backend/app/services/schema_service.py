@@ -216,6 +216,7 @@ class SchemaService:
             user=conn_info["user"],
             password=conn_info["password"],
             db=conn_info["database"],
+            charset="utf8mb4",
             minsize=1,
             maxsize=1,
         )

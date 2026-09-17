@@ -5,13 +5,13 @@ from functools import lru_cache
 
 from app.core.config import settings
 
-# 中国大陆用户使用 HF 镜像加速下载
-os.environ.setdefault("HF_ENDPOINT", "https://hf-mirror.com")
-
 
 @lru_cache(maxsize=1)
 def _load_local_model(model_name: str):
-    """懒加载本地 embedding 模型（全局单例）"""
+    """懒加载本地 embedding 模型（全局单例）
+
+    优先从本地路径加载（BAAI--bge-small-zh-v1.5 已通过 modelscope 下载到本地缓存）。
+    """
     from sentence_transformers import SentenceTransformer
     return SentenceTransformer(model_name)
 

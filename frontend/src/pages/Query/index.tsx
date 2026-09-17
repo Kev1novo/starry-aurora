@@ -64,9 +64,12 @@ export default function QueryPage() {
         if (!cancelled) {
           const items = res.data?.items || []
           setDatasources(items)
-          // 默认选中第一个可用数据源
+          // 默认选中 demo 数据源，没有则选第一个
           if (items.length > 0 && !selectedDsId) {
-            setSelectedDsId(items[0].id)
+            const demo = items.find((ds) =>
+              ds.name.toLowerCase().includes('demo'),
+            )
+            setSelectedDsId(demo?.id ?? items[0].id)
           }
         }
       })

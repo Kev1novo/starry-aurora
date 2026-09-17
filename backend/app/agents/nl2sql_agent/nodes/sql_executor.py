@@ -200,6 +200,7 @@ async def _execute_mysql(
         user=conn_info.username,
         password=conn_info.password,
         db=conn_info.database,
+        charset="utf8mb4",
         minsize=1,
         maxsize=2,
         connect_timeout=10,

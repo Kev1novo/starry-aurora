@@ -119,6 +119,7 @@ class DataSourceService:
                     user=data.username,
                     password=data.password,
                     db=data.database_name,
+                    charset="utf8mb4",
                     minsize=1,
                     maxsize=1,
                     connect_timeout=10,

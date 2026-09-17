@@ -133,6 +133,7 @@ async def _execute_sql_file(sql_path: Path):
         port=db_port,
         user=db_user,
         password=db_pass,
+        charset="utf8mb4",
         minsize=1,
         maxsize=1,
     )

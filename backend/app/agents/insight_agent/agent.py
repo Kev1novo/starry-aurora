@@ -666,6 +666,7 @@ class InsightAgent(BaseAgent):
                     user=config.get("username", "root"),
                     password=config.get("password", ""),
                     db=config.get("database", ""),
+                    charset="utf8mb4",
                 )
                 try:
                     async with conn.cursor() as cursor:
